@@ -207,9 +207,10 @@ if 1:
     if pt_file != 'none':
         checkpoint_load = torch.load(pt_file,map_location='cpu')
         # checkpoint_load2 = torch.load(pt_file)
-        CNN_net.load_state_dict(checkpoint_load['CNN_model_par'])
-        DNN1_net.load_state_dict(checkpoint_load['DNN1_model_par'])
-        DNN2_net.load_state_dict(checkpoint_load['DNN2_model_par'])
+        #  strict=False就会忽略一些匹配补上的参数.
+        CNN_net.load_state_dict(checkpoint_load['CNN_model_par'],strict=False)
+        DNN1_net.load_state_dict(checkpoint_load['DNN1_model_par'],strict=False)
+        DNN2_net.load_state_dict(checkpoint_load['DNN2_model_par'],strict=False)
 # except:
 #     print('加载失败')
 #     pass
