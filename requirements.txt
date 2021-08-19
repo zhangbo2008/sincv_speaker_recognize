@@ -1,0 +1,4 @@
+audioread==2.1.8
+augmentation==0.7
+torch==1.8
+pysoundfile==0.10.3

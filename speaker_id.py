@@ -21,7 +21,7 @@ from torch.autograd import Variable
 
 import sys
 import numpy as np
-from dnn_models import MLP, flip
+from dnn_models import MLP
 from dnn_models import SincNet as CNN
 from data_io import ReadList, read_conf, str_to_bool
 
@@ -201,20 +201,45 @@ DNN2_net = MLP(DNN2_arch)
 # DNN2_net.cuda()
 #=============接着训练.......直接读取之前训练好的权重做finetune即可.
 print('加载上次训练完的模型')
-try:
+if 1:
     pt_file=output_folder + '/model_raw.pkl'
+    # pt_file='model_raw.pkl'
     if pt_file != 'none':
-        checkpoint_load = torch.load(pt_file)
+        checkpoint_load = torch.load(pt_file,map_location='cpu')
+        # checkpoint_load2 = torch.load(pt_file)
         CNN_net.load_state_dict(checkpoint_load['CNN_model_par'])
         DNN1_net.load_state_dict(checkpoint_load['DNN1_model_par'])
         DNN2_net.load_state_dict(checkpoint_load['DNN2_model_par'])
-except:
-    print('加载失败')
-    pass
+# except:
+#     print('加载失败')
+#     pass
 
 optimizer_CNN = optim.RMSprop(CNN_net.parameters(), lr=lr, alpha=0.95, eps=1e-8)
 optimizer_DNN1 = optim.RMSprop(DNN1_net.parameters(), lr=lr, alpha=0.95, eps=1e-8)
 optimizer_DNN2 = optim.RMSprop(DNN2_net.parameters(), lr=lr, alpha=0.95, eps=1e-8)
+
+
+
+
+#========看测试集上效果:
+print('注意这个是200ms的错误率,虽然高不影响最后整个句子的评测')
+[inp, lab] = create_batches_rnd(128, data_folder, wav_lst_te, snt_te, wlen, lab_dict, 0.2)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # print('shiyongdeshi', device)
+CNN_net = CNN_net.to(device).eval()
+DNN1_net = DNN1_net.to(device).eval()
+DNN2_net = DNN2_net.to(device).eval()
+inp = inp.to(device)
+lab = lab.to(device)
+
+pout = DNN2_net(DNN1_net(CNN_net(inp)))  # 这里面就是自定义化的cnn 叫sinconv
+
+pred = torch.max(pout, dim=1)[1]
+loss = cost(pout, lab.long())
+err = torch.mean((pred != lab.long()).float())
+if 1:
+     print("在测试集上当前epoch的loss和err", loss, err)
+
 
 for epoch in range(N_epochs):
 
@@ -242,7 +267,7 @@ for epoch in range(N_epochs):
         loss = cost(pout, lab.long())
         err = torch.mean((pred != lab.long()).float())
         if i%1==0:
-             print("当前epoch的loss和err", loss, err)
+             print("训练集当前epoch的loss和err", loss, err)
 
         optimizer_CNN.zero_grad()
         optimizer_DNN1.zero_grad()
